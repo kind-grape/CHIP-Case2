@@ -1,7 +1,11 @@
 # terraform-vault-consul-deployment
 Terraform code for a production ready deployment of Vault OSS or Enterprise with Consul OSS or Enterprise.
 
-# Sparkly Sprokets
+## Project 
+
+Parts Unlimited
+
+<img src="https://cdn.websites.hibu.com/2ea7e038ab7a47a989614f1d6c43f2a5/dms3rep/multi/mobile/lo-215x216.png" width="150">
 ​
 <img src="https://www.digitalonus.com/wp-content/uploads/2019/06/digital_on_us_logo.png" width="300"><br>
 <img src="https://cdn.worldvectorlogo.com/logos/hashicorp.svg" width="150">
@@ -28,10 +32,11 @@ From an architectural viewpoint us-east-1 was discarded as the primary region an
 ​
 | Asset Name | IP/Hostname
 | ------ | ------ 
-| Flask App | http://18.228.155.206:8000/ |
+| Flask App | http://18.231.117.92:8000/ |
 ​
 ### Database Dynamic Secrets Configuration
 Database Dynamic secrets were enabled in order to work with the flask application following the steps below, for the MySQL/MariaDB database.
+Following should be completed on the vault cluster
 ​
 Database secrets were enabled:
 ```sh
@@ -58,15 +63,12 @@ vault read database/creds/my-role
 ```
 ​
 ### Vault Agent Configuration
-Enable App Role on Vault Cluster
+Prerequisite: Enable App Role on Vault Cluster
 ```sh
 vault auth enable approle
 vault policy write token_update token_update.hcl
 vault write auth/approle/role/apps policies="token_update"
-vault read -format=json auth/approle/role/apps/role-id \
-         | jq  -r '.data.role_id' > /opt/vault/config/roleID
-vault write -f -format=json auth/approle/role/apps/secret-id \
-         | jq -r '.data.secret_id' > /opt/vault/config/secretID
+
 ```
 Policy (token_update.hcl)  
 Define policy to allow token creation:
@@ -84,7 +86,7 @@ path "transit/+/orders" {
  capabilities = ["update", "read", "create", "delete"]
 }
 ```
-### Configure Vault Transit Engine
+### Configure Vault Transit Engine on Vault Cluster
 ```sh
 vault secrets enable transit
 vault write -f transit/keys/orders
@@ -142,6 +144,11 @@ Template in /opt/flask/mysqldbcreds.json.ctmpl
 }
 {{ end }}
 ````
+Once it's completed, application owner can use the following commands incorporated in their workflow/script to consume transit engine for vault to encrypt and decrypt secrets
+```
+vault write -format=json transit/encrypt/orders plaintext=$(base64 <<< "$text") | jq -r ".data.ciphertext"
+vault write -format=json transit/decrypt/orders ciphertext=$text | jq -r ".data.plaintext" | base64 --decode
+```
 ​
 ### S3 Bucket Configuration
 Consul Template awscreds.json.ctmpl
